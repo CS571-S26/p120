@@ -9,7 +9,7 @@ function App() {
 
   const API_URL = import.meta.env.DEV
   ? "/api/games"
-  : "https://p120.vercel.app";
+  : "https://p120.vercel.app/api/games";
 
   useEffect(() => {
     fetch(`${API_URL}?page=0`).then(res => res.json()).then(data => console.log(data))
