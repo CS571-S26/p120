@@ -1,51 +1,23 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { HashRouter, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import LibraryPage from "./pages/LibraryPage";
+import GamesPage from "./pages/GamesPage"
+import SiteNavbar from "./navigation/SiteNavBar";
+import GameDetailPage from "./pages/GameDetailPage"
 
 function App() {
-  const [count, setCount] = useState(0)
-
-  const API_URL = import.meta.env.DEV
-  ? "/api/games"
-  : "https://p120.vercel.app/api/games";
-
-  useEffect(() => {
-    fetch(`${API_URL}?page=0`).then(res => res.json()).then(data => console.log(data))
-
-  }, []);
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <HashRouter>
+      <SiteNavbar />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/library" element={<LibraryPage />} />
+        <Route path='/games' element={<GamesPage />} />
+        <Route path="/games/:id" element={<GameDetailPage />} />
 
-      <div className="ticks"></div>
-
-      
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </Routes>
+    </HashRouter>
+  );
 }
 
-export default App
+export default App;
