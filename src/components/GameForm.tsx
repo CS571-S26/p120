@@ -5,6 +5,7 @@ import {
 } from 'react-bootstrap'
 
 const STATUS_OPTIONS = ['Playing', 'Finished', 'Dropped', 'Backlogged']
+const PLATFORM_OPTIONS = ['Nintendo Switch', 'Xbox', 'Playstation', 'PC']
 
 function StarRating({
   value, onChange, disabled
@@ -40,16 +41,25 @@ function StarRating({
 export default function GameForm() {
   const [inLibrary, setInLibrary] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const [platform, setPlatform] = useState<string | null>(null) // New Platform State
   const [favorited, setFavorited] = useState(false)
   const [rating, setRating] = useState(0)
   const [review, setReview] = useState('')
   const [hours, setHours] = useState('')
   const [editing, setEditing] = useState(false)
 
-  const [saved, setSaved] = useState({ rating: 0, review: '', hours: '', status: null as string | null, favorited: false })
+  // Expanded saved state to include platform
+  const [saved, setSaved] = useState({ 
+    rating: 0, 
+    review: '', 
+    hours: '', 
+    status: null as string | null, 
+    platform: null as string | null, 
+    favorited: false 
+  })
 
   function handleEdit() {
-    setSaved({ rating, review, hours, status, favorited })
+    setSaved({ rating, review, hours, status, platform, favorited })
     setEditing(true)
   }
 
@@ -62,6 +72,7 @@ export default function GameForm() {
     setReview(saved.review)
     setHours(saved.hours)
     setStatus(saved.status)
+    setPlatform(saved.platform)
     setFavorited(saved.favorited)
     setEditing(false)
   }
@@ -74,6 +85,7 @@ export default function GameForm() {
   function handleRemoveFromLibrary() {
     setInLibrary(false)
     setStatus(null)
+    setPlatform(null)
     setFavorited(false)
     setRating(0)
     setReview('')
@@ -82,9 +94,8 @@ export default function GameForm() {
   }
 
   return (
-    <Card className="shadow-sm w-100">
+    <Card className="shadow-sm w-100 border-0">
       <Card.Body>
-        {/* Edit / Save / Cancel / Remove controls */}
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="d-flex gap-2 flex-wrap">
             {!inLibrary ? (
@@ -104,7 +115,6 @@ export default function GameForm() {
             )}
           </div>
 
-          {/* Heart / favorite */}
           <Button
             size="sm"
             variant={favorited ? 'danger' : 'outline-danger'}
@@ -117,25 +127,47 @@ export default function GameForm() {
         </div>
 
         <Form>
-          {/* Status dropdown — only shown once in library */}
           {inLibrary && (
-            <Form.Group as={Row} className="mb-3 align-items-center">
-              <Form.Label column xs={4} className="text-muted small">Status</Form.Label>
-              <Col xs={8}>
-                <DropdownButton
-                  size="sm"
-                  variant="outline-secondary"
-                  title={status ?? 'Select status…'}
-                  disabled={!editing}
-                >
-                  {STATUS_OPTIONS.map(opt => (
-                    <Dropdown.Item key={opt} onClick={() => setStatus(opt)} active={status === opt}>
-                      {opt}
-                    </Dropdown.Item>
-                  ))}
-                </DropdownButton>
-              </Col>
-            </Form.Group>
+            <>
+              {/* Status Row */}
+              <Form.Group as={Row} className="mb-3 align-items-center">
+                <Form.Label column xs={4} className="text-muted small">Status</Form.Label>
+                <Col xs={8}>
+                  <DropdownButton
+                    size="sm"
+                    variant="outline-secondary"
+                    title={status ?? 'Select status…'}
+                    disabled={!editing}
+                    className="w-100 custom-dropdown-toggle"
+                  >
+                    {STATUS_OPTIONS.map(opt => (
+                      <Dropdown.Item key={opt} onClick={() => setStatus(opt)} active={status === opt}>
+                        {opt}
+                      </Dropdown.Item>
+                    ))}
+                  </DropdownButton>
+                </Col>
+              </Form.Group>
+
+              {/* Platform Row */}
+              <Form.Group as={Row} className="mb-3 align-items-center">
+                <Form.Label column xs={4} className="text-muted small">Platform</Form.Label>
+                <Col xs={8}>
+                  <DropdownButton
+                    size="sm"
+                    variant="outline-secondary"
+                    title={platform ?? 'Select platform…'}
+                    disabled={!editing}
+                  >
+                    {PLATFORM_OPTIONS.map(plat => (
+                      <Dropdown.Item key={plat} onClick={() => setPlatform(plat)} active={platform === plat}>
+                        {plat}
+                      </Dropdown.Item>
+                    ))}
+                  </DropdownButton>
+                </Col>
+              </Form.Group>
+            </>
           )}
 
           {/* Hours played */}

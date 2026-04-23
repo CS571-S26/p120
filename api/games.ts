@@ -50,8 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         fields id, name, cover.url, total_rating_count, aggregated_rating, first_release_date, genres;
         where total_rating_count != null;
         sort total_rating_count desc;
-        limit 20;
-        offset ${page * 20};
+        limit 24;
+        offset ${page * 24};
       `;
     }
 
