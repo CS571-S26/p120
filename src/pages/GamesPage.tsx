@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Row, Col, Pagination, Spinner, FormControl, Dropdown, Container } from 'react-bootstrap'
+import { useState, useEffect, useRef } from 'react'
+import { Row, Col, Pagination, Spinner, FormControl, Dropdown, Container, Form } from 'react-bootstrap'
 import GameCard from '../components/GameCard'
 import '../App.css'
 
@@ -13,35 +13,90 @@ type Game = {
     aggregated_rating: number
 }
 
+const GENRE_MAP: Record<string, { field: 'genres' | 'themes'; id: number }> = {
+    'Action':     { field: 'themes', id: 1 },
+    'RPG':        { field: 'genres', id: 12 },
+    'Strategy':   { field: 'genres', id: 15 },
+    'Horror':     { field: 'themes', id: 19 },
+    'Indie':      { field: 'genres', id: 32 },
+    'Platformer': { field: 'genres', id: 8 },
+    'Shooter':    { field: 'genres', id: 5 },
+}
+
+const SORT_OPTIONS: { label: string; slug: string }[] = [
+    { label: 'Most Popular', slug: 'popular' },
+    { label: 'Top Rated', slug: 'rated' },
+    { label: 'A-Z', slug: 'az' },
+    { label: 'Recently Released', slug: 'recent' },
+]
+
 function GamesPage() {
     const [pageData, setPageData] = useState<Game[]>([])
     const [page, setPage] = useState(0)
-    const totalPages = 10
+    const [totalPages, setTotalPages] = useState(10)
     const [loading, setLoading] = useState(false)
     const [search, setSearch] = useState('')
+    const [searchInput, setSearchInput] = useState('')
     const [genre, setGenre] = useState('All Genres')
-    const [miscFilter, setMiscFilter] = useState('Most Popular')
+    const [sortOption, setSortOption] = useState('popular')
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const API_URL = import.meta.env.DEV ? "/api/games" : "https://p120.vercel.app/api/games"
 
     useEffect(() => {
         setLoading(true)
-        fetch(`${API_URL}?page=${page}`)
+        const params = new URLSearchParams()
+        params.set('page', String(page))
+        if (search) params.set('search', search)
+        if (genre !== 'All Genres') params.set('genre', JSON.stringify(GENRE_MAP[genre]))
+        params.set('sort', sortOption)
+
+        fetch(`${API_URL}?${params.toString()}`)
             .then(res => res.json())
             .then(data => {
-                setPageData(data.items || data)
+                const items = data.items || data
+                setPageData(Array.isArray(items) ? items : [])
+                if (Array.isArray(items) && items.length === 24) {
+                    setTotalPages(prev => Math.max(prev, page + 2))
+                } else if (Array.isArray(items) && items.length < 24) {
+                    setTotalPages(page + 1)
+                }
                 setLoading(false)
             })
             .catch(() => setLoading(false))
-    }, [page])
+    }, [page, search, genre, sortOption])
+
+    const handleSearchChange = (value: string) => {
+        setSearchInput(value)
+        if (debounceTimer.current) clearTimeout(debounceTimer.current)
+        debounceTimer.current = setTimeout(() => {
+            setSearch(value)
+            setPage(0)
+        }, 400)
+    }
+
+    const handleGenreChange = (g: string) => {
+        setGenre(g)
+        setPage(0)
+    }
+
+    const handleSortChange = (s: string) => {
+        setSortOption(s)
+        setPage(0)
+    }
 
     const paginationItems = []
-    for (let i = 0; i < totalPages; i++) {
+    const windowSize = 5
+    const start = Math.max(0, page - Math.floor(windowSize / 2))
+    const end = Math.min(totalPages, start + windowSize)
+
+    for (let i = start; i < end; i++) {
         paginationItems.push(
             <Pagination.Item
                 key={i}
                 active={i === page}
-                onClick={() => { setPage(i); window.scrollTo(0, 0); }}
+                onClick={() => { setPage(i); window.scrollTo(0, 0) }}
+                aria-current={i === page ? 'page' : undefined}
             >
                 {i + 1}
             </Pagination.Item>
@@ -49,111 +104,180 @@ function GamesPage() {
     }
 
     return (
-        <Container className="py-4">
-            {/* Filter Bar */}
-            <div className="bg-white border rounded-3 p-3 mb-5 shadow-sm">
-                <Row className="g-3 align-items-center">
-                    <Col xs={12} md={4}>
-                        <div className="position-relative">
-                            <FormControl
-                                className="ps-5 border-0 bg-light"
-                                style={{ height: '45px' }}
-                                placeholder="Search thousands of games..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                            <span className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">🔍</span>
-                        </div>
-                    </Col>
+        <main>
+            <Container className="py-4">
+                {/* Page Title */}
+                <h1 className="mb-4 fw-bold">Browse Games</h1>
 
-                    <Col xs={6} md={3}>
-                        <Dropdown className="w-100">
-                            <Dropdown.Toggle variant="light" className="w-100 border text-start d-flex justify-content-between align-items-center bg-white" style={{ height: '45px' }}>
-                                <span className="text-muted small me-2">GENRE</span>
-                                <strong>{genre}</strong>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu className="w-100 shadow-sm border-0">
-                                {['All Genres', 'Action', 'RPG', 'Strategy', 'Horror', 'Indie', 'Platformer'].map(g => (
-                                    <Dropdown.Item key={g} onClick={() => setGenre(g)}>{g}</Dropdown.Item>
-                                ))}
-                            </Dropdown.Menu>
-                        </Dropdown>
-                    </Col>
+                {/* Filter Section */}
+                <section aria-labelledby="filters-heading" className="bg-white border rounded-3 p-3 mb-5 shadow-sm">
+                    <h2 id="filters-heading" className="visually-hidden">Filter and search games</h2>
 
-                    <Col xs={6} md={3}>
-                        <Dropdown className="w-100">
-                            <Dropdown.Toggle variant="light" className="w-100 border text-start d-flex justify-content-between align-items-center bg-white" style={{ height: '45px' }}>
-                                <span className="text-muted small me-2">SORT</span>
-                                <strong>{miscFilter}</strong>
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu className="w-100 shadow-sm border-0">
-                                {['Most Popular', 'Top Rated', 'A-Z', 'Recently Released'].map(f => (
-                                    <Dropdown.Item key={f} onClick={() => setMiscFilter(f)}>{f}</Dropdown.Item>
-                                ))}
-                            </Dropdown.Menu>
-                        </Dropdown>
-                    </Col>
+                    <Row className="g-3 align-items-center">
+                        {/* Search */}
+                        <Col xs={12} md={4}>
+                            <Form.Group controlId="searchGames">
+                                <Form.Label className="visually-hidden">Search games</Form.Label>
+                                <div className="position-relative">
+                                    <FormControl
+                                        className="ps-5 border bg-light"
+                                        style={{ height: '45px' }}
+                                        placeholder="Search thousands of games..."
+                                        value={searchInput}
+                                        onChange={(e) => handleSearchChange(e.target.value)}
+                                        aria-describedby="searchHelp"
+                                    />
+                                    <span
+                                        className="position-absolute top-50 start-0 translate-middle-y ms-3"
+                                        aria-hidden="true"
+                                    >
+                                        🔍
+                                    </span>
+                                </div>
+                            </Form.Group>
+                        </Col>
 
-                    <Col xs={12} md={2} className="text-md-end">
-                        <span className="text-muted small fw-bold">{pageData.length} RESULTS</span>
-                    </Col>
-                </Row>
-            </div>
+                        {/* Genre */}
+                        <Col xs={6} md={3}>
+                            <Dropdown className="w-100">
+                                <Dropdown.Toggle
+                                    variant="light"
+                                    className="w-100 border text-start d-flex justify-content-between align-items-center bg-white"
+                                    style={{ height: '45px' }}
+                                    aria-label="Select genre"
+                                >
+                                    <span className="fw-bold me-2">Genre:</span>
+                                    <span>{genre}</span>
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu className="w-100 shadow-sm border">
+                                    {['All Genres', ...Object.keys(GENRE_MAP)].map(g => (
+                                        <Dropdown.Item
+                                            key={g}
+                                            onClick={() => handleGenreChange(g)}
+                                            active={genre === g}
+                                        >
+                                            {g}
+                                        </Dropdown.Item>
+                                    ))}
+                                </Dropdown.Menu>
+                            </Dropdown>
+                        </Col>
 
-            {loading ? (
-                <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: '50vh' }}>
-                    <Spinner animation="grow" variant="primary" />
-                    <p className="mt-3 text-muted fw-bold">Loading Games...</p>
-                </div>
-            ) : (
-                <div style={{ paddingBottom: '100px' }}>
-                    {/* Game Grid — 2 cols on mobile, 3 on md, 4 on lg */}
-                    <Row className="g-4">
-                        {pageData.map(game => (
-                            <Col key={game.id} xs={6} md={4} lg={3} className="d-flex">
-                                <GameCard
-                                    title={game.name}
-                                    rating={game.aggregated_rating}
-                                    coverUrl={game.cover?.url?.replace('t_thumb', 't_cover_big')}
-                                    genres={game.genres}
-                                    releaseDate={game.first_release_date}
-                                    id={game.id}
-                                />
-                            </Col>
-                        ))}
+                        {/* Sort */}
+                        <Col xs={6} md={3}>
+                            <Dropdown className="w-100">
+                                <Dropdown.Toggle
+                                    variant="light"
+                                    className="w-100 border text-start d-flex justify-content-between align-items-center bg-white"
+                                    style={{ height: '45px' }}
+                                    aria-label="Sort games"
+                                >
+                                    <span className="fw-bold me-2">Sort:</span>
+                                    <span>{SORT_OPTIONS.find(s => s.slug === sortOption)?.label ?? sortOption}</span>
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu className="w-100 shadow-sm border">
+                                    {SORT_OPTIONS.map(f => (
+                                        <Dropdown.Item
+                                            key={f.slug}
+                                            onClick={() => handleSortChange(f.slug)}
+                                            active={sortOption === f.slug}
+                                        >
+                                            {f.label}
+                                        </Dropdown.Item>
+                                    ))}
+                                </Dropdown.Menu>
+                            </Dropdown>
+                        </Col>
+
+                        {/* Results count */}
+                        <Col xs={12} md={2} className="text-md-end">
+                            <span
+                                className="fw-bold"
+                                aria-live="polite"
+                            >
+                                {pageData.length} results
+                            </span>
+                        </Col>
                     </Row>
+                </section>
 
-                    {/* Floating Pagination */}
-                    <div
+                {/* Results Section */}
+                <section aria-labelledby="results-heading">
+                    <h2 id="results-heading" className="visually-hidden">Game results</h2>
+
+                    {loading ? (
+                        <div
+                            className="d-flex flex-column justify-content-center align-items-center"
+                            style={{ height: '50vh' }}
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <Spinner animation="grow" />
+                            <span className="visually-hidden">Loading games...</span>
+                        </div>
+                    ) : pageData.length === 0 ? (
+                        <div className="text-center py-5">
+                            <p className="fs-5">No games found{search ? ` for "${search}"` : ''}.</p>
+                            {(search || genre !== 'All Genres') && (
+                                <button
+                                    className="btn btn-outline-dark btn-sm mt-2"
+                                    onClick={() => {
+                                        setSearch('')
+                                        setSearchInput('')
+                                        setGenre('All Genres')
+                                        setSortOption('popular')
+                                        setPage(0)
+                                    }}
+                                >
+                                    Clear filters
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <Row className="g-4">
+                            {pageData.map(game => (
+                                <Col key={game.id} xs={6} md={4} lg={3} className="d-flex">
+                                    <GameCard
+                                        title={game.name}
+                                        rating={game.aggregated_rating}
+                                        coverUrl={game.cover?.url?.replace('t_thumb', 't_cover_big')}
+                                        genres={game.genres}
+                                        releaseDate={game.first_release_date}
+                                        id={game.id}
+                                    />
+                                </Col>
+                            ))}
+                        </Row>
+                    )}
+                </section>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <nav
+                        aria-label="Pagination"
                         style={{
                             position: 'fixed',
                             bottom: 30,
                             left: '50%',
                             transform: 'translateX(-50%)',
-                            backgroundColor: 'rgba(255, 255, 255, 0.85)',
-                            backdropFilter: 'blur(10px)',
+                            backgroundColor: '#ffffff',
                             padding: '10px 20px',
                             borderRadius: '50px',
                             zIndex: 9999,
                             boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                            border: '1px solid rgba(255,255,255,0.3)'
+                            border: '1px solid #ced4da'
                         }}
                     >
-                        <Pagination className="mb-0 custom-pagination">
-                            <Pagination.Prev
-                                disabled={page === 0}
-                                onClick={() => { setPage(page - 1); window.scrollTo(0, 0); }}
-                            />
+                        <Pagination className="mb-0">
+                            <Pagination.First disabled={page === 0} onClick={() => setPage(0)} />
+                            <Pagination.Prev disabled={page === 0} onClick={() => setPage(page - 1)} />
                             {paginationItems}
-                            <Pagination.Next
-                                disabled={page === totalPages - 1}
-                                onClick={() => { setPage(page + 1); window.scrollTo(0, 0); }}
-                            />
+                            <Pagination.Next disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} />
                         </Pagination>
-                    </div>
-                </div>
-            )}
-        </Container>
+                    </nav>
+                )}
+            </Container>
+        </main>
     )
 }
 

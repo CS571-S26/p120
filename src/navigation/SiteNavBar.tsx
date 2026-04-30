@@ -21,6 +21,7 @@ const SiteNavbar: React.FC = () => {
                         <Nav.Link as={NavLink} to='/games' end>Games</Nav.Link>
                         <Nav.Link as={NavLink} to="/library">Library</Nav.Link>
                         <Nav.Link as={NavLink} to='/stats'>Statistics</Nav.Link>
+                        <Nav.Link as={NavLink} to="/play-next">Play Next</Nav.Link>
                     </Nav>
                 </Navbar.Collapse>
             </Container>

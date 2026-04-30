@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom'
 
 const GameCard: React.FC<GameCardProps> = ({ title, rating, coverUrl, releaseDate, id }) => {
 
-    const score = Math.round(rating);
+    const score = rating && !isNaN(rating) ? Math.round(rating) : null;
 
     const scoreStyle: React.CSSProperties = {
         position: 'absolute',
@@ -22,7 +22,7 @@ const GameCard: React.FC<GameCardProps> = ({ title, rating, coverUrl, releaseDat
         width: 44,
         height: 44,
         borderRadius: '50%',
-        backgroundColor: '#28a745', // bootstrap success
+        backgroundColor: score ? '#28a745' : '#adb5bd',
         color: 'white',
         display: 'flex',
         alignItems: 'center',
@@ -58,8 +58,8 @@ const GameCard: React.FC<GameCardProps> = ({ title, rating, coverUrl, releaseDat
 
             </Card.Body>
 
-            <div style={scoreStyle} aria-label={`Rating ${score} out of 100`}>
-                {score}
+            <div style={scoreStyle} aria-label={`Rating ${score ?? 'X'} out of 100`}>
+                {score ?? 'X'}
             </div>
 
 

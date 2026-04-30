@@ -5,6 +5,7 @@ import GamesPage from "./pages/GamesPage"
 import SiteNavbar from "./navigation/SiteNavBar";
 import GameDetailPage from "./pages/GameDetailPage"
 import StatsPage from "./pages/StatsPage";
+import PlayNextPage from "./pages/PlayNextPage"
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path='/games' element={<GamesPage />} />
         <Route path="/games/:id" element={<GameDetailPage />} />
         <Route path="/stats" element={<StatsPage />} />
+        <Route path="/play-next" element={<PlayNextPage />} />
 
       </Routes>
     </HashRouter>
